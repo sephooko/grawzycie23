@@ -240,21 +240,21 @@ class ThreadMonitor extends Thread {
     }
     
     public final void Start() {
-        setSprW();
-        startW();
+        setMonitor();
+        startM();
         liczGeneracje();
     }
     
 
 
-    private void setSprW() {
+    private void setMonitor() {
         Komorki = (ArrayList<Komorka>) newSesjaMapy.getKomorki();
         for (Komorka Komorka : Komorki) {
             Komorka.setMonitor(this);
         }
     }
     
-    private void startW() {
+    private void startM() {
         for (Komorka Komorka : Komorki) {
             Komorka.start();
         }
