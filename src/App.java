@@ -11,9 +11,9 @@ class Komorka extends Thread {
     private int value;
     private final int row;
     private final int column;
-    private int nextGenerationValue = -1;
+    private int kolejnaGeneracja = -1;
     private final Mapa Mapa;
-    private ThreadMonitor threadmonitor = null;
+    private SprawdzWatek sprW = null;
     
     public Komorka(final Mapa Mapa, final int row, final int column, final int value) {
         super("Wątek");
@@ -23,32 +23,32 @@ class Komorka extends Thread {
         this.value = value;
     }
     
-    public final void setThreadMonitor(ThreadMonitor threadMonitor) {
-        this.threadmonitor = threadMonitor;
+    public final void setSprW(SprawdzWatek sprawdzWatek) {
+        this.sprW = sprawdzWatek;
     }
     
     public final void run() {
-        if (threadmonitor == null) {
-            throw new GameLogicException("Wątek musi mieć ThreadMonitor.");
+        if (sprW == null) {
+            throw new GameLogicException("Wątek musi zostac sprawdzony");
         }
         
         while (!isInterrupted()) {
-            playGame();
+            grajGre();
         }
         
         System.out.println(getName() + " [" + row + "," + column + "] "+ "zamknięty.");
         
     }
 
-    private synchronized void playGame() {
-        calculateNextGenerationValue();
+    private synchronized void grajGre() {
+        calcKolejGen();
         try {
             wait();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         
-        setNextGenerationValue();
+        setKolejGen();
         try {
             wait();
         } catch (InterruptedException e) {
@@ -65,21 +65,21 @@ class Komorka extends Thread {
         interrupt();
     }
 
-    private void calculateNextGenerationValue() {
-        nextGenerationValue = getNextGenerationValue();
-        threadmonitor.ZakKalkulacji();
+    private void calcKolejGen() {
+        kolejnaGeneracja = getKolejGen();
+        sprW.ZakKalkulacji();
     }
 
-    public final int getNextGenerationValue() {
+    public final int getKolejGen() {
         if (value == 1) {
-            return getNextGenerationValueForOne();
+            return getKolejGen1();
         } else {
             
-            return getNextGenerationValueForZero();
+            return getKolejGen0();
         }
     }
 
-    private int getNextGenerationValueForOne() {
+    private int getKolejGen1() {
 
         int neighborsAmount = IleSasiadow();
         if (neighborsAmount < 2 || neighborsAmount > 3) {
@@ -89,10 +89,10 @@ class Komorka extends Thread {
         return 1;
     }
 
-    private int getNextGenerationValueForZero() {
+    private int getKolejGen0() {
 
-        int neighborsAmount = IleSasiadow();
-        if (neighborsAmount == 3) {
+        int iloscSasiadow = IleSasiadow();
+        if (iloscSasiadow == 3) {
             return 1;
         }
         
@@ -101,34 +101,34 @@ class Komorka extends Thread {
     
 
     private int IleSasiadow() {
-        int amount = 0;
+        int ilosc = 0;
         for (int i = row - 1; i <= row + 1; i++) {
             for (int j = column - 1; j <= column + 1; j++) {
-                Komorka neighbor = Mapa.OdczytajKomorke(i, j);
+                Komorka sasiad = Mapa.OdczytajKomorke(i, j);
                 
-                if (neighbor == this) {
+                if (sasiad == this) {
                     continue; // Do not count this.
                 }
                 
-                if (neighbor != null) {
-                    if (neighbor.getValue() == 1) {
-                        amount++;
+                if (sasiad != null) {
+                    if (sasiad.getValue() == 1) {
+                        ilosc++;
                     }
                 }
             }
         }
         
-        return amount;
+        return ilosc;
     }
 
-    private void setNextGenerationValue() {
-        if (nextGenerationValue != 0 && nextGenerationValue != 1) {
-            throw new GameLogicException(" Wartość przyjeła wartość inną niz 0 lub 1.");
+    private void setKolejGen() {
+        if (kolejnaGeneracja != 0 && kolejnaGeneracja != 1) {
+            throw new GameLogicException("Wartość przyjeta inną niz 0 lub 1.");
         }
         
-        value = nextGenerationValue;
-        nextGenerationValue = -1;
-        threadmonitor.threadFinishedNextValueSet();
+        value = kolejnaGeneracja;
+        kolejnaGeneracja = -1;
+        sprW.setKolejW();
     }
 
     public final int getValue() {
@@ -146,7 +146,7 @@ class Komorka extends Thread {
 
 class Mapa {
     
-    private Komorka[][] Mapa; // rows, columns
+    private Komorka[][] Mapa;
     private final int columns;
     private final int rows;
     
@@ -221,9 +221,9 @@ class Mapa {
 
 }
 
-class ThreadMonitor extends Thread {
+class SprawdzWatek extends Thread {
     
-    private final Mapa newSessionMapa;
+    private final Mapa newSesjaMapy;
     private ArrayList<Komorka> Komorki = null;
     private int IloscGen = 10;
     private int tmp1 = 0;
@@ -231,8 +231,8 @@ class ThreadMonitor extends Thread {
     
 
     
-    public ThreadMonitor(final Mapa Mapa) {
-        this.newSessionMapa = Mapa;
+    public SprawdzWatek(final Mapa Mapa) {
+        this.newSesjaMapy = Mapa;
     }
     
     public final void setIloscGen(final int IloscGen) {
@@ -240,21 +240,21 @@ class ThreadMonitor extends Thread {
     }
     
     public final void Start() {
-        setKomorkiThreadMonitor();
-        startKomorkaThreads();
+        setSprW();
+        startW();
         liczGeneracje();
     }
     
 
 
-    private void setKomorkiThreadMonitor() {
-        Komorki = (ArrayList<Komorka>) newSessionMapa.getKomorki();
+    private void setSprW() {
+        Komorki = (ArrayList<Komorka>) newSesjaMapy.getKomorki();
         for (Komorka Komorka : Komorki) {
-            Komorka.setThreadMonitor(this);
+            Komorka.setSprW(this);
         }
     }
     
-    private void startKomorkaThreads() {
+    private void startW() {
         for (Komorka Komorka : Komorki) {
             Komorka.start();
         }
@@ -305,7 +305,7 @@ class ThreadMonitor extends Thread {
 
     private void wyswietlGen(int nrGen) {
         System.out.println("---------- " + "Generacja" + " " + nrGen + " ----------");
-        newSessionMapa.WczytajMape();
+        newSesjaMapy.WczytajMape();
     }
       
     private void ZatrzymajWatek() {
@@ -323,7 +323,7 @@ class ThreadMonitor extends Thread {
         }
     }
     
-    public final synchronized void threadFinishedNextValueSet() {
+    public final synchronized void setKolejW() {
         tmp2++;
         
         if (tmp2 == Komorki.size()) {
@@ -334,13 +334,13 @@ class ThreadMonitor extends Thread {
 
 }
 
-class GameSession {
+class Sesja {
     
     private Mapa Mapa = null;
-    private ThreadMonitor threadMonitor = null;
+    private SprawdzWatek sprawdzWatek = null;
     public void StartSym(final String inputFile, final int IloscGen) throws IOException {
         StworzMape(inputFile);
-        utworzThreadMonitor(IloscGen);
+        setSprW(IloscGen);
         Start();
     }
     //stworzenie listy stringów z Mapay txt
@@ -368,14 +368,14 @@ class GameSession {
         return rows;
     }
 
-    private void utworzThreadMonitor(int IloscGen) {
-        threadMonitor = new ThreadMonitor(Mapa);
-        threadMonitor.setIloscGen(IloscGen);
+    private void setSprW(int IloscGen) {
+        sprawdzWatek = new SprawdzWatek(Mapa);
+        sprawdzWatek.setIloscGen(IloscGen);
     }
 
     private void Start() {
         System.out.println("Uruchamianie symulacji...");
-        threadMonitor.Start();
+        sprawdzWatek.Start();
     }
     
 }
@@ -389,7 +389,7 @@ class GameSession {
  class GraWZycie {
      public static void run(final String inputFile, final int IloscGen) throws IOException {
         System.out.println("Uruchamianie symulacji...");
-         GameSession nowaSesja = new GameSession();
+        Sesja nowaSesja = new Sesja();
         nowaSesja.StartSym(inputFile, IloscGen);
         System.out.println("Zatrzymywanie symulacji.");
     }    
