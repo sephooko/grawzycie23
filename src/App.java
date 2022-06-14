@@ -13,7 +13,7 @@ class Komorka extends Thread {
     private final int column;
     private int kolejnaGeneracja = -1;
     private final Mapa Mapa;
-    private SprawdzWatek sprW = null;
+    private ThreadMonitor monitor = null;
     
     public Komorka(final Mapa Mapa, final int row, final int column, final int value) {
         super("Wątek");
@@ -23,12 +23,12 @@ class Komorka extends Thread {
         this.value = value;
     }
     
-    public final void setSprW(SprawdzWatek sprawdzWatek) {
-        this.sprW = sprawdzWatek;
+    public final void setMonitor(ThreadMonitor sprawdzWatek) {
+        this.monitor = sprawdzWatek;
     }
     
     public final void run() {
-        if (sprW == null) {
+        if (monitor == null) {
             throw new GameLogicException("Wątek musi zostac sprawdzony");
         }
         
@@ -67,7 +67,7 @@ class Komorka extends Thread {
 
     private void calcKolejGen() {
         kolejnaGeneracja = getKolejGen();
-        sprW.ZakKalkulacji();
+        monitor.ZakKalkulacji();
     }
 
     public final int getKolejGen() {
@@ -81,8 +81,8 @@ class Komorka extends Thread {
 
     private int getKolejGen1() {
 
-        int neighborsAmount = IleSasiadow();
-        if (neighborsAmount < 2 || neighborsAmount > 3) {
+        int iloscSasiadow = IleSasiadow();
+        if (iloscSasiadow < 2 || iloscSasiadow > 3) {
             return 0;
         }
         
@@ -128,7 +128,7 @@ class Komorka extends Thread {
         
         value = kolejnaGeneracja;
         kolejnaGeneracja = -1;
-        sprW.setKolejW();
+        monitor.setKolejW();
     }
 
     public final int getValue() {
@@ -221,7 +221,7 @@ class Mapa {
 
 }
 
-class SprawdzWatek extends Thread {
+class ThreadMonitor extends Thread {
     
     private final Mapa newSesjaMapy;
     private ArrayList<Komorka> Komorki = null;
@@ -231,7 +231,7 @@ class SprawdzWatek extends Thread {
     
 
     
-    public SprawdzWatek(final Mapa Mapa) {
+    public ThreadMonitor(final Mapa Mapa) {
         this.newSesjaMapy = Mapa;
     }
     
@@ -250,7 +250,7 @@ class SprawdzWatek extends Thread {
     private void setSprW() {
         Komorki = (ArrayList<Komorka>) newSesjaMapy.getKomorki();
         for (Komorka Komorka : Komorki) {
-            Komorka.setSprW(this);
+            Komorka.setMonitor(this);
         }
     }
     
@@ -337,10 +337,10 @@ class SprawdzWatek extends Thread {
 class Sesja {
     
     private Mapa Mapa = null;
-    private SprawdzWatek sprawdzWatek = null;
+    private ThreadMonitor sprawdzWatek = null;
     public void StartSym(final String inputFile, final int IloscGen) throws IOException {
         StworzMape(inputFile);
-        setSprW(IloscGen);
+        setMonitor(IloscGen);
         Start();
     }
     //stworzenie listy stringów z Mapay txt
@@ -368,8 +368,8 @@ class Sesja {
         return rows;
     }
 
-    private void setSprW(int IloscGen) {
-        sprawdzWatek = new SprawdzWatek(Mapa);
+    private void setMonitor(int IloscGen) {
+        sprawdzWatek = new ThreadMonitor(Mapa);
         sprawdzWatek.setIloscGen(IloscGen);
     }
 
